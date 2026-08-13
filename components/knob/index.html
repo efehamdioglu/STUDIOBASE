@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=VT323&family=Outfit:wght@500;600;700&display=swap');
+  html, body {
+    margin: 0; padding: 0; background: transparent;
+    font-family: 'Outfit', Arial, sans-serif;
+    overflow: hidden;
+  }
+  .wrap { text-align: center; padding: 2px 0 4px 0; -webkit-user-select: none; user-select: none; }
+  .knob-label {
+    font-size: 0.58rem; letter-spacing: 1.5px; color: #8c96a8; font-weight: 600;
+    margin-bottom: 6px; text-transform: uppercase; white-space: nowrap;
+    text-shadow: 1px 1px 0px rgba(0,0,0,0.2);
+  }
+  .knob-face {
+    width: 52px; height: 52px; border-radius: 50%; margin: 0 auto;
+    background: #1e222b;
+    box-shadow:
+      4px 4px 8px #12151a,
+      -4px -4px 8px #2a2f3c,
+      inset 1px 1px 0px rgba(255,255,255,0.05);
+    position: relative;
+    border: 1px solid #1a1d24;
+    cursor: grab;
+    touch-action: none;
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+  }
+  .knob-face:hover {
+    box-shadow:
+      5px 5px 10px #111318,
+      -5px -5px 10px #2c323f,
+      inset 1px 1px 0px rgba(255,255,255,0.08);
+  }
+  .knob-face:active {
+    cursor: grabbing;
+    transform: scale(0.97);
+    box-shadow:
+      2px 2px 4px #12151a,
+      -2px -2px 4px #2a2f3c,
+      inset 1px 1px 0px rgba(255,255,255,0.03);
+  }
+  .knob-notch {
+    position: absolute; top: 6px; left: 50%; width: 5px; height: 5px;
+    background: #00e5ff; border-radius: 50%; transform-origin: 50% 20px;
+    box-shadow: 0 0 6px #00e5ff, 0 0 12px rgba(0,229,255,0.4); pointer-events: none;
+  }
+  .knob-ring {
+    position: absolute; inset: -4px; border-radius: 50%;
+    background: transparent;
+    box-shadow:
+      inset 2px 2px 4px #12151a,
+      inset -2px -2px 4px #2a2f3c;
+    border: 1px solid rgba(255,255,255,0.02);
+    pointer-events: none;
+  }
+  .knob-value {
+    font-family: 'VT323', monospace, Arial; font-size: 0.88rem;
+    color: #00e5ff; text-shadow: 0 0 6px rgba(0,229,255,0.6);
+    margin-top: 6px; min-height: 1.1rem; letter-spacing: 0.5px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="knob-label" id="lbl"></div>
+  <div class="knob-face" id="face">
+    <div class="knob-ring"></div>
+    <div class="knob-notch" id="notch"></div>
+  </div>
+  <div class="knob-value" id="val"></div>
+</div>
+<script>
+const MIN_ANGLE = -135, MAX_ANGLE = 135, SWEEP = MAX_ANGLE - MIN_ANGLE;
+
+let mode = "range";
+let minV = 0, maxV = 1, options = [], label = "";
+let currentValue = 0;
+let dragging = false;
+
+const face = document.getElementById("face");
+const notch = document.getElementById("notch");
+const valEl = document.getElementById("val");
+const lblEl = document.getElementById("lbl");
+
+function angleForValue(v) {
+  if (mode === "select") {
+    const n = options.length;
+    if (n <= 1) return 0;
+    const idx = options.indexOf(v);
+    const safeIdx = idx < 0 ? 0 : idx;
+    return MIN_ANGLE + (safeIdx / (n - 1)) * SWEEP;
+  }
+  const ratio = (v - minV) / ((maxV - minV) || 1);
+  return MIN_ANGLE + ratio * SWEEP;
+}
+
+function valueForAngle(angle) {
+  angle = Math.max(MIN_ANGLE, Math.min(MAX_ANGLE, angle));
+  const ratio = (angle - MIN_ANGLE) / SWEEP;
+  if (mode === "select") {
+    const n = options.length;
+    if (n === 0) return null;
+    const idx = Math.round(ratio * (n - 1));
+    return options[Math.max(0, Math.min(n - 1, idx))];
+  }
+  const raw = minV + ratio * (maxV - minV);
+  return Math.round(raw);
+}
+
+function render() {
+  const angle = angleForValue(currentValue);
+  notch.style.transform = "translateX(-50%) rotate(" + angle + "deg)";
+  valEl.textContent = currentValue === null || currentValue === undefined ? "" : currentValue;
+  lblEl.textContent = label;
+}
+
+function sendValue(v) {
+  const payload = mode === "select" ? options.indexOf(v) : v;
+  window.parent.postMessage(
+    { isStreamlitMessage: true, type: "streamlit:setComponentValue", value: payload, dataType: "json" },
+    "*"
+  );
+}
+
+function setValue(v, notify) {
+  currentValue = v;
+  render();
+  if (notify) sendValue(v);
+}
+
+function angleFromEvent(e) {
+  const rect = face.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const dx = clientX - cx;
+  const dy = clientY - cy;
+  // 0deg = yukarı (saat 12 yönü). atan2 ile döndürülmüş koordinat sistemi.
+  return Math.atan2(dx, -dy) * (180 / Math.PI);
+}
+
+function onPointerDown(e) {
+  dragging = true;
+  e.preventDefault();
+  onPointerMove(e);
+}
+function onPointerMove(e) {
+  if (!dragging) return;
+  e.preventDefault();
+  const angle = angleFromEvent(e);
+  const v = valueForAngle(angle);
+  if (v !== null && v !== currentValue) setValue(v, true);
+}
+function onPointerUp() {
+  dragging = false;
+}
+
+face.addEventListener("mousedown", onPointerDown);
+window.addEventListener("mousemove", onPointerMove);
+window.addEventListener("mouseup", onPointerUp);
+face.addEventListener("touchstart", onPointerDown, { passive: false });
+window.addEventListener("touchmove", onPointerMove, { passive: false });
+window.addEventListener("touchend", onPointerUp);
+
+// Sürüklemenin yanı sıra tekerlek (scroll) ile de ince ayar yapılabilsin
+face.addEventListener("wheel", function (e) {
+  e.preventDefault();
+  const dir = e.deltaY > 0 ? -1 : 1;
+  if (mode === "select") {
+    const n = options.length;
+    const idx = options.indexOf(currentValue);
+    const nextIdx = Math.max(0, Math.min(n - 1, (idx < 0 ? 0 : idx) + dir));
+    setValue(options[nextIdx], true);
+  } else {
+    const next = Math.max(minV, Math.min(maxV, currentValue + dir));
+    setValue(next, true);
+  }
+}, { passive: false });
+
+window.addEventListener("message", (event) => {
+  const data = event.data;
+  if (!data || data.type !== "streamlit:render") return;
+  const args = data.args || {};
+  mode = args.mode || "range";
+  minV = args.min ?? 0;
+  maxV = args.max ?? 1;
+  options = args.options || [];
+  label = args.label || "";
+  if (!dragging) {
+    currentValue = args.value;
+  }
+  render();
+  window.parent.postMessage(
+    { isStreamlitMessage: true, type: "streamlit:setFrameHeight", height: document.body.scrollHeight + 10 },
+    "*"
+  );
+});
+
+window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:componentReady", apiVersion: 1 }, "*");
+</script>
+</body>
+</html>
