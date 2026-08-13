@@ -32,7 +32,7 @@ graph TD
 
 Arayüz, premium donanım hissini simüle eden **Dark Neumorphism** detaylarıyla donatılmıştır:
 * **Neumorphic Gövde & Kumanda Paneli**: Kabartmalı (extruded) ve içe göçük (recessed) gölgelerin uyumuyla şekillenmiş mat yüzeyler.
-* **Apple Tarzı Segmented Toggellar**: Sağlayıcı (Ollama/Anthropic) ve Model seçimleri için yan yana kayan, pürüzsüz kapsül butonları.
+* **Apple Tarzı Segmented Toggellar**: Sağlayıcı (Gemini / Ollama / Anthropic) ve Model seçimleri için yan yana kayan, pürüzsüz kapsül butonları.
 * **Gömülü Konsol Ekranı (Live Agent Logs)**: Ajanlar arasındaki anlık konuşmaları, hece ölçümlerini ve karar süreçlerini gösteren, otomatik olarak en alta kayan neomorphic terminal ekranı.
 * **Canlı Ajan Akış Diyagramı**: Hangi ajanın o an aktif olduğunu, iterasyon sayısını ve geri bildirim döngüsünü canlı olarak yansıtan şema.
 
@@ -44,6 +44,7 @@ Arayüz, premium donanım hissini simüle eden **Dark Neumorphism** detaylarıyl
 * **Arayüz (UI)**: Streamlit
 * **Masaüstü Paketleme (Container)**: PyWebView (Streamlit sunucusunu Edge WebView2 ile çerçevesiz masaüstü penceresine gömer)
 * **Büyük Dil Modelleri (LLMs)**:
+  * **Google Gemini API** (Bulut çalıştırma - Ücretsiz & Hızlı: *Gemini 3.5 Lite*, *Gemini 3.6 Flash*)
   * **Ollama** (Yerel çalıştırma: *qwen2.5:7b*, *qwen2.5-coder:3b*)
   * **Anthropic API** (Bulut çalıştırma: *Claude Sonnet*, *Haiku*, *Opus*)
 
@@ -60,11 +61,14 @@ pip install -r requirements.txt
 ### 2. Çevre Değişkenleri (`.env`)
 Proje kök dizininde `.env` dosyası oluşturun (Örnek için bkz. `.env.example`):
 ```env
-# Anthropic API kullanacaksanız:
-ANTHROPIC_API_KEY=your_api_key_here
+# Google Gemini API (Önerilen - Google AI Studio'dan Ücretsiz Key):
+GEMINI_API_KEY=your_gemini_api_key_here
 
-# Varsayılan sağlayıcı ayarı
-LLM_PROVIDER=ollama
+# Anthropic API kullanacaksanız:
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+
+# Varsayılan sağlayıcı ayarı ("gemini", "ollama" veya "anthropic")
+LLM_PROVIDER=gemini
 ```
 
 ### 3. Uygulamanın Başlatılması
@@ -82,6 +86,6 @@ LLM_PROVIDER=ollama
 
 * **Terminal (CLI) Üzerinden**:
   ```powershell
-  python main.py --theme "Cyberpunk Melankoli" --tracks 4 --max-iterations 3
+  python main.py --theme "Cyberpunk Melankoli" --tracks 4 --max-iterations 3 --provider gemini
   ```
   *Çıktılar `./output` klasörüne `.md` ve `.json` formatında kaydedilir.*
