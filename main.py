@@ -4,9 +4,23 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from src.agents import AGENTS
 from src.orchestrator import run_album_pipeline
 
 load_dotenv()
+
+
+def print_agents() -> None:
+    """Orkestradaki her ajanı name/description/prompt olarak ayrı ayrı basar —
+    ajanların birbirinden bağımsız, tek tek incelenebilir tanımlar olduğunu gösterir."""
+    for i, agent in enumerate(AGENTS, start=1):
+        print(f"\n{'=' * 60}")
+        print(f"AJAN {i}/{len(AGENTS)}: {agent.name}")
+        print("-" * 60)
+        print(f"description:\n  {agent.description}")
+        print(f"\nprompt:\n{agent.prompt}")
+    print(f"\n{'=' * 60}")
+    print(f"Toplam {len(AGENTS)} ajan.")
 
 
 def slugify(text: str) -> str:
@@ -43,13 +57,21 @@ def print_progress(event: str, **kwargs) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Müzik Albümü Konsept & Söz Yazarı Multi-Agent Orkestrasyonu")
-    parser.add_argument("--theme", required=True, help="Albüm teması (örn. 'Cyberpunk Melankoli')")
+    parser.add_argument("--list-agents", action="store_true", help="Orkestradaki ajanları (name/description/prompt) tek tek yazdır ve çık")
+    parser.add_argument("--theme", required=False, help="Albüm teması (örn. 'Cyberpunk Melankoli')")
     parser.add_argument("--tracks", type=int, default=4, help="Parça sayısı (varsayılan: 4)")
     parser.add_argument("--max-iterations", type=int, default=3, help="Parça başına maksimum revizyon döngüsü (varsayılan: 3)")
     parser.add_argument("--provider", choices=["ollama", "gemini", "anthropic"], default=None, help="LLM sağlayıcısı (varsayılan: LLM_PROVIDER env ya da 'ollama')")
     parser.add_argument("--model", default=None, help="Kullanılacak model adı (sağlayıcıya göre: Ollama/Gemini model adı ya da Claude model ID)")
     parser.add_argument("--output-dir", default="output", help="Çıktı klasörü (varsayılan: ./output)")
     args = parser.parse_args()
+
+    if args.list_agents:
+        print_agents()
+        return
+
+    if not args.theme:
+        parser.error("--theme gerekli (--list-agents kullanmıyorsan)")
 
     import os
     if args.provider:
